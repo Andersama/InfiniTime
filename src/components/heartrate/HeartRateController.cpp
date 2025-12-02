@@ -7,18 +7,19 @@ using namespace Pinetime::Controllers;
 void HeartRateController::Update(HeartRateController::States newState, uint8_t heartRate) {
   this->state = newState;
   if (this->heartRate != heartRate) {
-
     uint32_t ts = xTaskGetTickCount();
-    uint32_t zone;
-    //auto adjustMax = pdMS_TO_TICKS(300000); // 5 minutes
-    for (zone = zoneSettings.bpmTarget.size() - 1; i < zoneSettings.bpmTarget.size(); --i) {
+    uint32_t z;
+    zone = 0;
+    auto adjustMax = pdMS_TO_TICKS(zoneSettings.adjustDelay);
+    for (z = zoneSettings.bpmTarget.size() - 1; i < zoneSettings.bpmTarget.size(); --i) {
       if (this->heartRate >= zoneSettings.bpmTarget[i]) {
         uint32_t dt = ts - lastActiveTime;
         currentActivity.zoneTime[i] += dt;
-
+        zone = z + 1;
         // don't make increases unless this is consistantly higher than normal (zone 5 is max)
-        if (zone >= 4 && dt > zoneSettings.adjustDelay) {
-          zoneSettings.maxHeartRate = zoneSettings.maxHeartRate >= this->heartRate ? zoneSettings.maxHeartRate : this->heartRate;   
+        if (zoneSettings.allowCalibration && zone >= 5 && dt > adjustMax) {
+          zoneSettings.maxHeartRate = zoneSettings.maxHeartRate >= this->heartRate ? zoneSettings.maxHeartRate : this->heartRate;
+          zoneSettings.bpmTarget = bpmZones(zoneSettings.percentTarget, zoneSettings.maxHeartRate);
         }
         break;
       }
@@ -29,6 +30,46 @@ void HeartRateController::Update(HeartRateController::States newState, uint8_t h
 
     service->OnNewHeartRateValue(heartRate);
   }
+}
+
+void HeartRateController::AdvanceDay() {
+  HeartRateZones<uint16_t> convertedActivity {};
+  auto ticksPerSecond = pdMS_TO_TICKS(1000);
+
+  for (uint32_t i = 0; i < convertedActivity.zoneTime.size(); i++) {
+    convertedActivity.zoneTime[i] = fixed_rounding(currentActivity.totalTime, ticksPerSecond);
+  }
+
+  activity[0] = convertedActivity;
+  activity++;
+}
+
+void HeartRateController::SaveSettingsToFile() const {
+  lfs_dir systemDir;
+  if (fs.DirOpen("/.system", &systemDir) != LFS_ERR_OK) {
+    fs.DirCreate("/.system");
+  }
+  fs.DirClose(&systemDir);
+  lfs_file_t heartRateZoneFile;
+  if (fs.FileOpen(&heartRateZoneFile, "/.system/hrzs.dat", LFS_O_WRONLY | LFS_O_CREAT) != LFS_ERR_OK) {
+    NRF_LOG_WARNING("[HeartRateController] Failed to open heart rate zone settings file for saving");
+    return;
+  }
+
+  fs.FileWrite(&heartRateZoneFile, reinterpret_cast<const uint8_t*>(&zoneSettings), sizeof(zoneSettings));
+  fs.FileClose(&heartRateZoneFile);
+  NRF_LOG_INFO("[HeartRateController] Saved heart rate zone settings with format version %u to file", zoneSettings.version);
+
+  lfs_file_t zoneDataFile;
+  if (fs.FileOpen(&zoneDataFile, "/.system/hrz.dat", LFS_O_WRONLY | LFS_O_CREAT) != LFS_ERR_OK) {
+    NRF_LOG_WARNING("[HeartRateController] Failed to open heart rate zone data file for saving");
+    return;
+  }
+
+  fs.FileWrite(&zoneDataFile, reinterpret_cast<const uint8_t*>(&activity), sizeof(activity));
+  fs.FileClose(&zoneDataFile);
+  NRF_LOG_INFO("[HeartRateController] Saved heart rate zone data with format version %u to file", zoneSettings.version);
+
 }
 
 void HeartRateController::Enable() {
