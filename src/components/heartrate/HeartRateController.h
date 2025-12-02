@@ -81,6 +81,10 @@ namespace Pinetime {
         return zone;
       }
 
+      HeartRateZones<uint32_t> Activity() const {
+        return currentActivity;
+      }
+
       void SetService(Pinetime::Controllers::HeartRateService* service);
 
       void AdvanceDay();

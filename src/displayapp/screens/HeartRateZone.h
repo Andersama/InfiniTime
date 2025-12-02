@@ -1,0 +1,62 @@
+#pragma once
+
+#include <cstdint>
+#include <chrono>
+#include <array>
+#include "displayapp/screens/Screen.h"
+#include "systemtask/SystemTask.h"
+#include "systemtask/WakeLock.h"
+#include "Symbols.h"
+#include <lvgl/src/lv_core/lv_style.h>
+#include <lvgl/src/lv_core/lv_obj.h>
+
+namespace Pinetime {
+  namespace Controllers {
+    class HeartRateController;
+  }
+
+  namespace Applications {
+    namespace Screens {
+
+      class HeartRateZone : public Screen {
+      public:
+        HeartRateZone(Controllers::HeartRateController& HeartRateController, System::SystemTask& systemTask);
+        ~HeartRateZone() override;
+
+        void Refresh() override;
+
+        void OnStartStopEvent(lv_event_t event);
+
+      private:
+        Controllers::HeartRateController& heartRateController;
+        Pinetime::System::WakeLock wakeLock;
+        void UpdateStartStopButton(bool isRunning);
+
+        std::array<lv_obj_t*,5> zone_bar;
+        std::array<lv_obj_t*,5> label_time;
+        /*
+        lv_obj_t* label_hr;
+        lv_obj_t* label_bpm;
+        lv_obj_t* label_status;
+        lv_obj_t* btn_startStop;
+        lv_obj_t* label_startStop;
+        */
+        lv_task_t* taskRefresh;
+      };
+    }
+
+    template <>
+    struct AppTraits<Apps::HeartRateZone> {
+      static constexpr Apps app = Apps::HeartRateZone;
+      static constexpr const char* icon = Screens::Symbols::heartBeat;
+
+      static Screens::Screen* Create(AppControllers& controllers) {
+        return new Screens::HeartRateZone(controllers.heartRateController, *controllers.systemTask);
+      };
+
+      static bool IsAvailable(Pinetime::Controllers::FS& /*filesystem*/) {
+        return true;
+      };
+    };
+  }
+}
