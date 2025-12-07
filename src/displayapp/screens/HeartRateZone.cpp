@@ -19,12 +19,19 @@ HeartRateZone::HeartRateZone(Controllers::HeartRateController& heartRateControll
     zone_bar[i] = lv_bar_create(screen, nullptr);
     
     total += activity.zoneTime[i];
-    lv_obj_set_style_local_line_color(zone_bar[i], LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, Colors::bgAlt);
+
+    lv_obj_set_style_local_bg_opa(zone_bar[i], LV_BAR_PART_BG, LV_STATE_DEFAULT, LV_OPA_0);
+    lv_obj_set_style_local_line_color(zone_bar[i], LV_BAR_PART_BG, LV_STATE_DEFAULT, Colors::bgAlt);
+    lv_obj_set_style_local_border_width(zone_bar[i], LV_BAR_PART_BG, LV_STATE_DEFAULT, 2);
+    lv_obj_set_style_local_radius(zone_bar[i], LV_BAR_PART_BG, LV_STATE_DEFAULT, 0);
+
     lv_obj_set_size(zone_bar[i], 240, 20);
-    lv_obj_align(zone_bar[i], nullptr, LV_ALIGN_IN_TOP_LEFT, 10, 25 * i);
+    lv_obj_align(zone_bar[i], screen, LV_ALIGN_IN_TOP_MID, 0, 25 * i);
 
     label_time[i] = lv_label_create(zone_bar[i],nullptr);
-    lv_obj_align(zone_bar[i], nullptr, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(label_time[i], zone_bar[i], LV_ALIGN_CENTER, 0, 0);
+
+    lv_obj_set_style_local_text_color(label_time[i], LV_LABEL_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_CYAN);
   }
 
   lv_label_set_text_static(label_time[0], "Warm Up");
