@@ -1,6 +1,5 @@
 #include "displayapp/screens/HeartRateZone.h"
 #include <lvgl/lvgl.h>
-#include <lvgl/lv_obj_style.h>
 #include <components/heartrate/HeartRateController.h>
 
 #include "displayapp/DisplayApp.h"
@@ -8,31 +7,8 @@
 
 using namespace Pinetime::Applications::Screens;
 
-namespace {
-  const char* ToString(Pinetime::Controllers::HeartRateController::States s) {
-    switch (s) {
-      case Pinetime::Controllers::HeartRateController::States::NotEnoughData:
-        return "Not enough data,\nplease wait...";
-      case Pinetime::Controllers::HeartRateController::States::NoTouch:
-        return "No touch detected";
-      case Pinetime::Controllers::HeartRateController::States::Running:
-        return "Measuring...";
-      case Pinetime::Controllers::HeartRateController::States::Stopped:
-        return "Stopped";
-    }
-    return "";
-  }
-
-  void btnStartStopEventHandler(lv_obj_t* obj, lv_event_t event) {
-    auto* screen = static_cast<HeartRate*>(obj->user_data);
-    screen->OnStartStopEvent(event);
-  }
-}
-
 HeartRateZone::HeartRateZone(Controllers::HeartRateController& heartRateController, System::SystemTask& systemTask)
   : heartRateController {heartRateController}, wakeLock(systemTask) {
-  bool isHrRunning = heartRateController.State() != Controllers::HeartRateController::States::Stopped;
-
   auto activity = heartRateController.Activity();
   uint32_t total = 0;
 
@@ -42,13 +18,12 @@ HeartRateZone::HeartRateZone(Controllers::HeartRateController& heartRateControll
   for (uint8_t i = 0; i < zone_bar.size(); i++) {
     zone_bar[i] = lv_bar_create(screen, nullptr);
     
-    //lv_bar_set_orientation(zone_bar[i], LV_BAR_ORIENTATION_HORIZONTAL);
     total += activity.zoneTime[i];
     lv_obj_set_style_local_line_color(zone_bar[i], LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, Colors::bgAlt);
     lv_obj_set_size(zone_bar[i], 240, 20);
     lv_obj_align(zone_bar[i], nullptr, LV_ALIGN_IN_TOP_LEFT, 10, 25 * i);
 
-    label_time[i] = lv_label_create(zone_bar[i]);
+    label_time[i] = lv_label_create(zone_bar[i],nullptr);
     lv_obj_align(zone_bar[i], nullptr, LV_ALIGN_CENTER, 0, 0);
   }
 

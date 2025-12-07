@@ -4,22 +4,34 @@
 
 using namespace Pinetime::Controllers;
 
+HeartRateZoneSettings::HeartRateZoneSettings() {
+  version = 0;
+  adjustMsDelay = 300000;
+  age = 25;
+  maxHeartRate = maxHeartRateEstimate(age);
+  percentTarget = {50, 60, 70, 80, 90};
+  bpmTarget = bpmZones(percentTarget, maxHeartRate);
+  allowCalibration = true;
+};
+
+HeartRateController::HeartRateController(Pinetime::Controllers::FS& fs) : fs {fs} {};
+
 void HeartRateController::Update(HeartRateController::States newState, uint8_t heartRate) {
   this->state = newState;
   if (this->heartRate != heartRate) {
     uint32_t ts = xTaskGetTickCount();
     uint32_t z;
     zone = 0;
-    auto adjustMax = pdMS_TO_TICKS(zoneSettings.adjustDelay);
-    for (z = zoneSettings.bpmTarget.size() - 1; i < zoneSettings.bpmTarget.size(); --i) {
-      if (this->heartRate >= zoneSettings.bpmTarget[i]) {
+    auto adjustMax = pdMS_TO_TICKS(this->zSettings.adjustMsDelay);
+    for (z = this->zSettings.bpmTarget.size() - 1; z < this->zSettings.bpmTarget.size(); --z) {
+      if (this->heartRate >= this->zSettings.bpmTarget[z]) {
         uint32_t dt = ts - lastActiveTime;
-        currentActivity.zoneTime[i] += dt;
+        currentActivity.zoneTime[z] += dt;
         zone = z + 1;
         // don't make increases unless this is consistantly higher than normal (zone 5 is max)
-        if (zoneSettings.allowCalibration && zone >= 5 && dt > adjustMax) {
-          zoneSettings.maxHeartRate = zoneSettings.maxHeartRate >= this->heartRate ? zoneSettings.maxHeartRate : this->heartRate;
-          zoneSettings.bpmTarget = bpmZones(zoneSettings.percentTarget, zoneSettings.maxHeartRate);
+        if (this->zSettings.allowCalibration && zone >= 5 && dt > adjustMax) {
+          this->zSettings.maxHeartRate = this->zSettings.maxHeartRate >= this->heartRate ? this->zSettings.maxHeartRate : this->heartRate;
+          this->zSettings.bpmTarget = bpmZones(this->zSettings.percentTarget, this->zSettings.maxHeartRate);
         }
         break;
       }
@@ -36,8 +48,9 @@ void HeartRateController::AdvanceDay() {
   HeartRateZones<uint16_t> convertedActivity {};
   auto ticksPerSecond = pdMS_TO_TICKS(1000);
 
+  auto totalTime = currentActivity.totalTime();
   for (uint32_t i = 0; i < convertedActivity.zoneTime.size(); i++) {
-    convertedActivity.zoneTime[i] = fixed_rounding(currentActivity.totalTime, ticksPerSecond);
+    convertedActivity.zoneTime[i] = fixed_rounding(totalTime, ticksPerSecond);
   }
 
   activity[0] = convertedActivity;
@@ -56,9 +69,9 @@ void HeartRateController::SaveSettingsToFile() const {
     return;
   }
 
-  fs.FileWrite(&heartRateZoneFile, reinterpret_cast<const uint8_t*>(&zoneSettings), sizeof(zoneSettings));
+  fs.FileWrite(&heartRateZoneFile, reinterpret_cast<const uint8_t*>(&(this->zSettings)), sizeof(this->zSettings));
   fs.FileClose(&heartRateZoneFile);
-  NRF_LOG_INFO("[HeartRateController] Saved heart rate zone settings with format version %u to file", zoneSettings.version);
+  NRF_LOG_INFO("[HeartRateController] Saved heart rate zone settings with format version %u to file", this->zSettings.version);
 
   lfs_file_t zoneDataFile;
   if (fs.FileOpen(&zoneDataFile, "/.system/hrz.dat", LFS_O_WRONLY | LFS_O_CREAT) != LFS_ERR_OK) {
@@ -68,8 +81,7 @@ void HeartRateController::SaveSettingsToFile() const {
 
   fs.FileWrite(&zoneDataFile, reinterpret_cast<const uint8_t*>(&activity), sizeof(activity));
   fs.FileClose(&zoneDataFile);
-  NRF_LOG_INFO("[HeartRateController] Saved heart rate zone data with format version %u to file", zoneSettings.version);
-
+  NRF_LOG_INFO("[HeartRateController] Saved heart rate zone data with format version %u to file", this->zSettings.version);
 }
 
 void HeartRateController::Enable() {

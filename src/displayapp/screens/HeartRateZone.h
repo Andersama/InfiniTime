@@ -25,22 +25,13 @@ namespace Pinetime {
 
         void Refresh() override;
 
-        void OnStartStopEvent(lv_event_t event);
-
       private:
         Controllers::HeartRateController& heartRateController;
         Pinetime::System::WakeLock wakeLock;
-        void UpdateStartStopButton(bool isRunning);
 
         std::array<lv_obj_t*,5> zone_bar;
         std::array<lv_obj_t*,5> label_time;
-        /*
-        lv_obj_t* label_hr;
-        lv_obj_t* label_bpm;
-        lv_obj_t* label_status;
-        lv_obj_t* btn_startStop;
-        lv_obj_t* label_startStop;
-        */
+
         lv_task_t* taskRefresh;
       };
     }
