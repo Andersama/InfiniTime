@@ -19,7 +19,7 @@ namespace Pinetime {
     template <typename T>
     struct HeartRateZones {
       // 1440 minutes in a day (11 bits), 86400 seconds (17 bits)
-      std::array<T,5> zoneTime = {};
+      std::array<T, 5> zoneTime = {};
 
       T totalTime() const {
         return zoneTime[0] + zoneTime[1] + zoneTime[2] + zoneTime[3] + zoneTime[4];
@@ -49,7 +49,8 @@ namespace Pinetime {
 
     struct HeartRateZoneSettings {
       uint32_t version = 0;
-      uint32_t adjustMsDelay = 300000;
+      uint32_t adjustMsDelay = 300000;     // 5 minutes
+      uint32_t exerciseMsTarget = 1800000; // hour 3600'000
       uint8_t age = 25;
       uint8_t maxHeartRate = 195;
       std::array<uint8_t, 5> percentTarget = {50, 60, 70, 80, 90};
@@ -86,6 +87,10 @@ namespace Pinetime {
         return currentActivity;
       }
 
+      HeartRateZoneSettings hrzSettings() const {
+        return zSettings;
+      }
+
       void SetService(Pinetime::Controllers::HeartRateService* service);
 
       void AdvanceDay();
@@ -95,6 +100,7 @@ namespace Pinetime {
       Applications::HeartRateTask* task = nullptr;
       States state = States::Stopped;
       uint8_t heartRate = 0;
+      uint8_t restingHeartRate = 0;
       Pinetime::Controllers::HeartRateService* service = nullptr;
       Pinetime::Controllers::FS& fs;
 

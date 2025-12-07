@@ -7,6 +7,7 @@ using namespace Pinetime::Controllers;
 HeartRateZoneSettings::HeartRateZoneSettings() {
   version = 0;
   adjustMsDelay = 300000;
+  exerciseMsTarget = 1800000;
   age = 25;
   maxHeartRate = maxHeartRateEstimate(age);
   percentTarget = {50, 60, 70, 80, 90};

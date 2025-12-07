@@ -29,8 +29,11 @@ namespace Pinetime {
         Controllers::HeartRateController& heartRateController;
         Pinetime::System::WakeLock wakeLock;
 
-        std::array<lv_obj_t*,5> zone_bar;
-        std::array<lv_obj_t*,5> label_time;
+        std::array<lv_obj_t*, 5> zone_bar = {};
+        std::array<lv_obj_t*, 5> label_time = {};
+        lv_obj_t* total_bar = nullptr;
+        lv_obj_t* total_label = nullptr;
+        lv_obj_t* title = nullptr;
 
         lv_task_t* taskRefresh;
       };
