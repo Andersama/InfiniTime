@@ -5,6 +5,31 @@
 #include "components/motor/MotorController.h"
 #include "components/motion/MotionController.h"
 
+namespace PCG {
+  uint32_t pcg32_random_r(pcg32_random_t* rng) {
+    uint64_t oldstate = rng->state;
+    // Advance internal state
+    rng->state = oldstate * 6364136223846793005ULL + (rng->inc | 1);
+    // Calculate output function (XSH RR), uses old state for max ILP
+    uint32_t xorshifted = ((oldstate >> 18u) ^ oldstate) >> 27u;
+    uint32_t rot = oldstate >> 59u;
+    return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+  }
+
+  // Lemire's Method (slight rewrite) [0, range)
+  uint32_t bounded_rand(pcg32_random_t& rng, uint32_t range) {
+    uint64_t m;
+    uint32_t t = (-range) % range;
+    uint32_t l;
+    do {
+      uint32_t x = pcg32_random_r(&rng);
+      m = uint64_t(x) * uint64_t(range);
+      l = uint32_t(m);
+    } while (l < t);
+    return m >> 32;
+  }
+};
+
 using namespace Pinetime::Applications::Screens;
 
 namespace {
@@ -43,11 +68,12 @@ Dice::Dice(Controllers::MotionController& motionController,
            Controllers::MotorController& motorController,
            Controllers::Settings& settingsController)
   : motorController {motorController}, motionController {motionController}, settingsController {settingsController} {
-  std::seed_seq sseq {static_cast<uint32_t>(xTaskGetTickCount()),
-                      static_cast<uint32_t>(motionController.X()),
-                      static_cast<uint32_t>(motionController.Y()),
-                      static_cast<uint32_t>(motionController.Z())};
-  gen.seed(sseq);
+  rng.state = (static_cast<uint64_t>(xTaskGetTickCount()) << 32) ^ (static_cast<uint64_t>(motionController.NbSteps()) << 16) ^ (uint64_t) &rng;
+  rng.inc = (static_cast<uint64_t>(motionController.X()) << 32) ^ (static_cast<uint64_t>(motionController.Y()) << 16) ^
+            static_cast<uint64_t>(motionController.Z());
+  rng.inc ^= (uint64_t) PCG::pcg32_random_r(&rng);
+  rng.inc ^= (uint64_t) PCG::pcg32_random_r(&rng) << 32;
+  rng.state = (uint64_t) PCG::pcg32_random_r(&rng) << 32 ^ PCG::pcg32_random_r(&rng);
 
   lv_obj_t* nCounterLabel = MakeLabel(&jetbrains_mono_bold_20,
                                       LV_COLOR_WHITE,
@@ -79,8 +105,7 @@ Dice::Dice(Controllers::MotionController& motionController,
   lv_obj_align(dCounter.GetObject(), dCounterLabel, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
   dCounter.SetValue(6);
 
-  std::uniform_int_distribution<> distrib(0, resultColors.size() - 1);
-  currentColorIndex = distrib(gen);
+  currentColorIndex = PCG::bounded_rand(rng, resultColors.size());
 
   resultTotalLabel = MakeLabel(&jetbrains_mono_42,
                                resultColors[currentColorIndex],
@@ -157,12 +182,10 @@ void Dice::Refresh() {
 void Dice::Roll() {
   uint8_t resultIndividual;
   uint16_t resultTotal = 0;
-  std::uniform_int_distribution<> distrib(1, dCounter.GetValue());
-
   lv_label_set_text(resultIndividualLabel, "");
 
   if (nCounter.GetValue() == 1) {
-    resultTotal = distrib(gen);
+    resultTotal = PCG::bounded_rand(rng, dCounter.GetValue()) + 1;
     if (dCounter.GetValue() == 2) {
       switch (resultTotal) {
         case 1:
@@ -175,7 +198,7 @@ void Dice::Roll() {
     }
   } else {
     for (uint8_t i = 0; i < nCounter.GetValue(); i++) {
-      resultIndividual = distrib(gen);
+      resultIndividual = PCG::bounded_rand(rng, dCounter.GetValue()) + 1;
       resultTotal += resultIndividual;
       lv_label_ins_text(resultIndividualLabel, LV_LABEL_POS_LAST, std::to_string(resultIndividual).c_str());
       if (i < (nCounter.GetValue() - 1)) {

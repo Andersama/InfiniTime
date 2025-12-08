@@ -7,7 +7,23 @@
 #include "Symbols.h"
 
 #include <array>
-#include <random>
+#include <cstdint>
+
+namespace PCG {
+  // *Really* minimal PCG32 code / (c) 2014 M.E. O'Neill / pcg-random.org
+  // Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
+  // Website: https://www.pcg-random.org/download.html
+  // See: https://www.apache.org/licenses/GPL-compatibility.html
+  typedef struct {
+    uint64_t state;
+    uint64_t inc;
+  } pcg32_random_t;
+
+  uint32_t pcg32_random_r(pcg32_random_t* rng);
+
+  // Lemire's Method (slight rewrite) [0, range)
+  uint32_t bounded_rand(pcg32_random_t& rng, uint32_t range);
+};
 
 namespace Pinetime {
   namespace Applications {
@@ -29,7 +45,7 @@ namespace Pinetime {
         lv_task_t* refreshTask;
         bool enableShakeForDice = false;
 
-        std::mt19937 gen;
+        PCG::pcg32_random_t rng;
 
         std::array<lv_color_t, 3> resultColors = {LV_COLOR_YELLOW, LV_COLOR_MAGENTA, LV_COLOR_AQUA};
         uint8_t currentColorIndex;
