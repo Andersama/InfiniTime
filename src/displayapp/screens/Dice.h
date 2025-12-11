@@ -4,26 +4,13 @@
 #include "displayapp/screens/Screen.h"
 #include "displayapp/widgets/Counter.h"
 #include "displayapp/Controllers.h"
+#include "components/rng/PCG.h"
 #include "Symbols.h"
 
 #include <array>
 #include <cstdint>
 
-namespace PCG {
-  // *Really* minimal PCG32 code / (c) 2014 M.E. O'Neill / pcg-random.org
-  // Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
-  // Website: https://www.pcg-random.org/download.html
-  // See: https://www.apache.org/licenses/GPL-compatibility.html
-  typedef struct {
-    uint64_t state;
-    uint64_t inc;
-  } pcg32_random_t;
 
-  uint32_t pcg32_random_r(pcg32_random_t* rng);
-
-  // Lemire's Method (slight rewrite) [0, range)
-  uint32_t bounded_rand(pcg32_random_t& rng, uint32_t range);
-};
 
 namespace Pinetime {
   namespace Applications {
@@ -32,7 +19,8 @@ namespace Pinetime {
       public:
         Dice(Controllers::MotionController& motionController,
              Controllers::MotorController& motorController,
-             Controllers::Settings& settingsController);
+             Controllers::Settings& settingsController,
+             Controllers::RNG& prngController);
         ~Dice() override;
         void Roll();
         void Refresh() override;
@@ -45,7 +33,7 @@ namespace Pinetime {
         lv_task_t* refreshTask;
         bool enableShakeForDice = false;
 
-        PCG::pcg32_random_t rng;
+        Controllers::RNG rng;
 
         std::array<lv_color_t, 3> resultColors = {LV_COLOR_YELLOW, LV_COLOR_MAGENTA, LV_COLOR_AQUA};
         uint8_t currentColorIndex;
@@ -70,7 +58,10 @@ namespace Pinetime {
       static constexpr const char* icon = Screens::Symbols::dice;
 
       static Screens::Screen* Create(AppControllers& controllers) {
-        return new Screens::Dice(controllers.motionController, controllers.motorController, controllers.settingsController);
+        return new Screens::Dice(controllers.motionController,
+                                 controllers.motorController,
+                                 controllers.settingsController,
+                                 *controllers.prngController);
       };
 
       static bool IsAvailable(Pinetime::Controllers::FS& /*filesystem*/) {

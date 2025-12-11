@@ -473,6 +473,7 @@ list(APPEND SOURCE_FILES
         components/stopwatch/StopWatchController.cpp
         components/alarm/AlarmController.cpp
         components/fs/FS.cpp
+        
         drivers/Cst816s.cpp
         FreeRTOS/port.c
         FreeRTOS/port_cmsis_systick.c
@@ -485,6 +486,8 @@ list(APPEND SOURCE_FILES
         systemtask/SystemMonitor.cpp
         systemtask/WakeLock.cpp
         drivers/TwiMaster.cpp
+
+        components/rng/PCG.cpp
 
         heartratetask/HeartRateTask.cpp
         components/heartrate/HeartRateController.cpp

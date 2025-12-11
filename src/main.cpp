@@ -37,6 +37,7 @@
 #include "components/heartrate/HeartRateController.h"
 #include "components/stopwatch/StopWatchController.h"
 #include "components/fs/FS.h"
+#include "components/rng/PCG.h"
 #include "drivers/Spi.h"
 #include "drivers/SpiMaster.h"
 #include "drivers/SpiNorFlash.h"
@@ -360,6 +361,8 @@ int main() {
     NoInit_MagicWord = NoInit_MagicValue;
   }
 
+  ble_ll_rand_data_get((uint8_t*) &systemTask.prngController, sizeof(systemTask.prngController));
+  systemTask.prngController.SeedController(motionController);
   systemTask.Start();
 
   nimble_port_init();
