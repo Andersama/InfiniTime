@@ -3,20 +3,22 @@
 #include <FreeRTOS.h>
 #include <timers.h>
 #include "components/motion/MotionController.h"
+#include "pcg-cpp/include/pcg_random.hpp"
 
 namespace Pinetime {
   namespace Controllers {
     struct RNG {
-      using rng_uint = uint32_t;
-      using rng_uint2 = uint64_t;
-      using rng_out = uint16_t;
 
+      /*
       struct pcg_random_t {
         rng_uint state = {};
         rng_uint inc = {};
       };
+      */
+      using State = pcg32;
+      using rng_uint = State::state_type;// uint32_t;
+      using rng_out = State::result_type;// uint16_t;
 
-      using State = pcg_random_t;
       State rng = {};
 
       State Seed(rng_uint s, rng_uint i);

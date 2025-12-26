@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.10)
 
 project(pinetime-app C CXX ASM)
 
-
 # define some variables just for this example to determine file locations
 set(NRF_PROJECT_NAME pinetime-app)
 set(NRF_BOARD pca10040)
@@ -685,6 +684,7 @@ set(INCLUDE_FILES
         buttonhandler/ButtonHandler.h
         touchhandler/TouchHandler.h
         utility/Math.h
+        pcg-cpp/include/pcg_random.hpp
         )
 
 include_directories(
